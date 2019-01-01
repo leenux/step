@@ -1,0 +1,14 @@
+version: '2'
+services:
+  cherry-postgresql:
+    image: postgres:10.5-alpine
+    volumes:
+    #     - ~/volumes/cherry/postgresql/data:/var/lib/postgresql/data/
+    - ~/volumes/cherry/configs/pgsql/my-postgres.conf:/etc/postgresql/postgresql.conf
+    command: postgres -c 'config_file=/etc/postgresql/postgresql.conf'
+    environment:
+    - POSTGRES_USER=cherry
+    - POSTGRES_PASSWORD=cherry
+    ports:
+    - 5432:5432
+#"$PWD/my-postgres.conf":/etc/postgresql/postgresql.conf postgres -c 'config_file=/etc/postgresql/postgresql.conf'

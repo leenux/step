@@ -1,0 +1,40 @@
+version: '3.5'
+
+networks:
+  cherry-network:
+    name: cherry-network
+    driver: bridge
+
+services:
+  pulsar-0:
+    container_name: pulsar-0
+    hostname: pulsar-0
+    image: apachepulsar/pulsar:2.2.1
+    networks:
+    - cherry-network
+    environment:
+    - PULSAR_MEM=-Xms512m -Xmx512m -XX:MaxDirectMemorySize=1g
+#    command: >
+#      /bin/bash -c
+#      "bin/apply-config-from-env.py conf/standalone.conf
+#      && bin/pulsar standalone"
+    command: bin/pulsar standalone
+    volumes:
+    - ~/volumes/cherry/data/pulsar:/pulsar/data
+#    - ~/volumes/cherry/configs/pulsar/standalone.conf:/pulsar/conf/standalone.conf
+    ports:
+    - "6650:6650"
+    - "8080:8080"
+
+  pulsar-dashboard:
+    container_name: pulsar-dashboard
+    hostname: pulsar-dashboard
+    networks:
+    - cherry-network
+    image: apachepulsar/pulsar-dashboard
+    depends_on:
+    - pulsar-0
+    ports:
+    - "9494:80"
+    environment:
+    - SERVICE_URL=http://pulsar-0:8080

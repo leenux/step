@@ -1,0 +1,19 @@
+version: '3.5'
+
+networks:
+  cherry-network:
+    name: cherry-network
+    driver: bridge
+
+services:
+  cherry-redis:
+    container_name: redis-0
+    hostname: redis-0
+    image: redis:5.0.2-alpine
+    networks:
+    - cherry-network
+    command: redis-server /usr/local/etc/redis/redis.conf
+    volumes:
+      - ~/volumes/cherry/configs/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    ports:
+      - "6379:6379"

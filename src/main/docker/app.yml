@@ -1,0 +1,96 @@
+version: '3.5'
+
+networks:
+  cherry-network:
+    name: cherry-network
+    driver: bridge
+
+services:
+  cherry-app-0:
+    container_name: cherry-app-0
+    hostname: cherry-app-0
+    image: cherry:v1
+    networks:
+    - cherry-network
+    environment:
+#    - MACHINE_ID=1
+    - DEBUG=true
+    - GORM_URL=postgres://cherry@roach-2:26257/cherry?sslmode=verify-full&sslrootcert=/home/cherry/configs/ca.crt&sslcert=/home/cherry/configs/client.cherry.crt&sslkey=/home/cherry/configs/client.cherry.key
+    - REDIS_RING=redis-0:6379
+    volumes:
+    - ~/volumes/cherry/configs/cherry:/home/cherry/configs/
+    ports:
+    - 1323:1323
+    - 1324:1324
+
+  roach-0:
+    container_name: roach-0
+    hostname: roach-0
+    image: cockroachdb/cockroach:${COCKROACH_VERSION:-v2.1.1}
+    networks:
+    - cherry-network
+    command: start --certs-dir=/cockroach/certs
+    volumes:
+    - ~/volumes/cherry/configs/roach:/cockroach/certs
+    ports:
+    - 8181:8080
+    - 26257:26257
+
+  roach-1:
+    container_name: roach-1
+    hostname: roach-1
+    image: cockroachdb/cockroach:${COCKROACH_VERSION:-v2.1.1}
+    networks:
+    - cherry-network
+    command: start --certs-dir=/cockroach/certs --join=roach-0
+    volumes:
+    - ~/volumes/cherry/configs/roach:/cockroach/certs
+
+  roach-2:
+    container_name: roach-2
+    hostname: roach-2
+    image: cockroachdb/cockroach:${COCKROACH_VERSION:-v2.1.1}
+    networks:
+    - cherry-network
+    command: start --certs-dir=/cockroach/certs --join=roach-0
+    volumes:
+    - ~/volumes/cherry/configs/roach:/cockroach/certs
+
+#若cherry已经存在 不运行此服务，k8s or istio可以配置前置
+  db-init:
+    container_name: db-init
+    hostname: db-init
+    image: cockroachdb/cockroach:${COCKROACH_VERSION:-v2.1.1}
+    networks:
+    - cherry-network
+    volumes:
+    - ~/volumes/cherry/configs/roach:/cockroach/certs
+    entrypoint: "/bin/bash"
+    command: /cockroach/certs/setup_db.sh
+
+  cherry-redis:
+    container_name: redis-0
+    hostname: redis-0
+    image: redis:5.0.2-alpine
+    networks:
+    - cherry-network
+    command: redis-server /usr/local/etc/redis/redis.conf
+    volumes:
+    - ~/volumes/cherry/configs/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    ports:
+    - "6379:6379"
+
+  nginx-0:
+    container_name: nginx-0
+    hostname: nginx-0
+    image: nginx:1.15.6-alpine
+    networks:
+    - cherry-network
+    volumes:
+    - ~/volumes/cherry/configs/nginx/nginx.conf:/etc/nginx/nginx.conf
+    - ~/volumes/cherry/configs/nginx/cert/:/etc/nginx/cert/
+    - ~/volumes/cherry/data/nginx/log:/var/log/nginx
+    - ~/volumes/cherry/data/nginx/www:/var/www
+    ports:
+    - 5003:5003
+    - 443:443

@@ -1,0 +1,119 @@
+version: "3.5"
+
+networks:
+  cherry-network:
+    name: cherry-network
+    driver: bridge
+
+services:
+  # Redis configuration file example
+  # https://raw.githubusercontent.com/antirez/redis/4.0/redis.conf
+  redis-master:
+    container_name: redis-master
+    hostname: redis-master
+    networks:
+      - cherry-network
+    image: redis:5.0.3-alpine
+    ports:
+      - 6379:6379
+    volumes:
+      - ~/volumes/cherry/data/redis/master-data:/data
+    command: [
+      '--requirepass "Synjones123"',
+      '--masterauth "Synjones123"',
+      '--maxmemory 512mb',
+      '--maxmemory-policy volatile-ttl',
+      '--save ""',
+    ]
+
+
+  redis-node-1: &node
+    container_name: redis-node-1
+    hostname: redis-node-1
+    networks:
+      - cherry-network
+    image: redis:5.0.3-alpine
+    depends_on:
+      - redis-master
+    ports:
+      - 6380:6380
+    volumes:
+      - ~/volumes/cherry/data/redis/node-1-data:/data
+      - ~/volumes/cherry/data/redis/node-1-data:/tmp
+    command: [
+      '--port 6380',
+      '--requirepass "Synjones123"',
+      '--slaveof redis-master 6379',
+      '--masterauth "Synjones123"',
+      '--save ""',
+    ]
+    links:
+      - redis-master
+
+  redis-node-2:
+    <<: *node
+    container_name: redis-node-2
+    hostname: redis-node-2
+    networks:
+      - cherry-network
+    ports:
+      - 6381:6381
+    volumes:
+      - ~/volumes/cherry/data/redis/node-2-data:/data
+      - ~/volumes/cherry/data/redis/node-2-data:/tmp
+    command: [
+      '--port 6381',
+      '--requirepass "Synjones123"',
+      '--slaveof redis-master 6379',
+      '--masterauth "Synjones123"',
+      '--save ""',
+    ]
+
+  sentinel-1: &sentinel
+    build:
+      context: ./sentinel
+      dockerfile: Dockerfile-sentinel
+    container_name: sentinel-1
+    hostname: sentinel-1
+    networks:
+      - cherry-network
+    ports:
+      - 26379:26379
+    image: redis-sentinel:dev
+    environment:
+      - SENTINEL_REDIS_PWD=Synjones123
+      - SENTINEL_REDIS_IP=redis-master
+      - SENTINEL_QUORUM=2
+      - SENTINEL_DOWN_AFTER=3000
+    command: [
+      '/etc/redis/sentinel.conf',
+      '--sentinel'
+    ]
+    depends_on:
+      - redis-master
+      - redis-node-1
+      - redis-node-2
+    links:
+      - redis-master
+      - redis-node-1
+      - redis-node-2
+
+  sentinel-2:
+    <<: *sentinel
+    container_name: sentinel-2
+    hostname: sentinel-2
+    networks:
+      - cherry-network
+    ports:
+      - 26380:26379
+
+  sentinel-3:
+    <<: *sentinel
+    container_name: sentinel-3
+    hostname: sentinel-3
+    networks:
+      - cherry-network
+    ports:
+      - 26381:26379
+
+

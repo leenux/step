@@ -1,0 +1,23 @@
+version: '3.5'
+
+networks:
+  cherry-network:
+    name: cherry-network
+    driver: bridge
+
+services:
+
+  nginx-0:
+    container_name: nginx-0
+    hostname: nginx-0
+    image: nginx:1.15.6-alpine
+    networks:
+    - cherry-network
+    volumes:
+    - ~/volumes/cherry/configs/nginx/nginx.conf:/etc/nginx/nginx.conf
+    - ~/volumes/cherry/configs/nginx/cert/:/etc/nginx/cert/
+    - ~/volumes/cherry/data/nginx/log:/var/log/nginx
+    - ~/volumes/cherry/data/nginx/www:/var/www
+    ports:
+    - 5003:5003
+    - 443:443

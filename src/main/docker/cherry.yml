@@ -1,0 +1,23 @@
+version: '3.5'
+
+networks:
+  cherry-network:
+    name: cherry-network
+    driver: bridge
+
+services:
+  cherry-app:
+    container_name: cherry-app-0
+    hostname: cherry-app-0
+    image: cherry:v1
+    networks:
+    - cherry-network
+    environment:
+#    - MACHINE_ID=1
+    - DEBUG=true
+    - GORM_URL=postgres://cherry@roach-2:26257/cherry?sslmode=verify-full&sslrootcert=/cockroach/certs/ca.crt&sslcert=/cockroach/certs/client.cherry.crt&sslkey=/cockroach/certs/client.cherry.key
+    - REDIS_RING=redis-0:6379
+    volumes:
+    - ~/volumes/cherry/configs/cherry/:/home/cherry/configs/
+    ports:
+    - 1323:1323
